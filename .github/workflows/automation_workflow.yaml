@@ -2,8 +2,8 @@ name: TARA Automation Workflow
 
 on:
   push:
-    branches:
-      - main
+    paths:
+      - "data/*.har"
   workflow_dispatch:
     inputs:
       har_file:
