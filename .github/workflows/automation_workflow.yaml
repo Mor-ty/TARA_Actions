@@ -1,0 +1,131 @@
+name: TARA Automation Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      har_file:
+        description: "Path of the HAR file in your repo"
+        required: true
+        type: string
+      users:
+        description: "Number of users for load test"
+        required: true
+        default: 1
+      iterations:
+        description: "Number of iterations"
+        required: true
+        default: 1
+      constant_time:
+        description: "Constant think time (ms)"
+        required: true
+        default: 1000
+      random_time:
+        description: "Random time (ms)"
+        required: true
+        default: 10000
+      random_time_variance:
+        description: "Variance (ms)"
+        required: true
+        default: 3000
+
+jobs:
+  testing-automation:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout Repo
+    - name: Repo Checkout
+      uses: actions/checkout@v4
+
+    # Step 2: Copy HAR file from repo input
+    - name: Copy HAR file
+      run: |
+        echo "HAR FILE: ${{ github.event.inputs.har_file }}"
+        cp "${{ github.workspace }}/${{ github.event.inputs.har_file }}" ./input.har
+
+    # Step 3: Setup Java
+    - name: Java Setup
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+
+    # Step 4: Install Maven
+    - name: Maven Installation
+      run: sudo apt-get update && sudo apt-get install -y maven
+
+    # Step 5: Clone and building HAR→JMX plugin
+    - name: Build HAR Converter JAR
+      run: |
+        git clone https://github.com/vdaburon/har-to-jmeter-convertor.git
+        cd har-to-jmeter-convertor
+        mvn clean package
+        ls -l target/
+    
+    # Step 6: Converting HAR → JMX
+    - name: Converting  HAR to JMX
+      run: |
+        java -cp har-to-jmeter-convertor/target/har-to-jmeter-convertor-7.1-jar-with-dependencies.jar \
+          io.github.vdaburon.jmeter.har.HarForJMeter \
+          -har_in input.har \
+          -jmx_out generated_test.jmx \
+          -add_pause true \
+          -new_tc_pause 3000
+        ls -l generated_test.jmx
+
+    # Step 7: Validating JMX output
+    - name: Validate JMX
+      run: |
+        if [ ! -s generated_test.jmx ]; then
+          echo "ERROR: JMX file is empty. Conversion failed."
+          exit 1
+        fi
+        echo "JMX is valid."
+
+    # Step 8: Docker Setup
+    - name: Docker Setup
+      uses: docker/setup-buildx-action@v3
+
+    - name: Install Docker Compose
+      run: sudo apt-get update && sudo apt-get install -y docker-compose
+
+    # Step 9: Enforce limits
+    - name: Enforcing Limits
+      run: |
+        u=${{ github.event.inputs.users }}
+        i=${{ github.event.inputs.iterations }}
+        if [ "$u" -gt 100 ]; then u=100; fi
+        if [ "$i" -gt 100 ]; then i=100; fi
+        echo "users=$u" >> $GITHUB_ENV
+        echo "iterations=$i" >> $GITHUB_ENV
+
+    # Step 10: Running JMeter test
+    - name: Running JMeter Test
+      run: |
+        mkdir -p results
+        docker run --rm \
+          -v ${{ github.workspace }}:/jmeter \
+          -v ${{ github.workspace }}/results:/results \
+          -w /jmeter justb4/jmeter:5.5 \
+          -n -t generated_test.jmx -l ./results/results.jtl \
+          -Jusers=${{ env.users }} \
+          -Jiterations=${{ env.iterations }} \
+          -Jconstant_time=${{ github.event.inputs.constant_time }} \
+          -Jrandom_time=${{ github.event.inputs.random_time }} \
+          -Jrandom_time_variance=${{ github.event.inputs.random_time_variance }}
+
+    # Step 11: Generating HTML report
+    - name: Generating JMeter Report
+      run: |
+        docker run --rm \
+          -v ${{ github.workspace }}:/jmeter \
+          -v ${{ github.workspace }}/results:/results \
+          -w /jmeter justb4/jmeter:5.5 \
+          -g ./results/results.jtl -o ./results/report
+
+    # Step 12: Uploading report
+    - name: Uploading Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: JMeter-Report
+        path: ./results/report
