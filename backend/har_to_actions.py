@@ -51,7 +51,7 @@ def createActions(har_file_path: str):
     res = gemini_with_file_structuredResp(
         prompt=har_to_actions_prompt,
         file_to_upload=har_file_path,
-        Structured_class=Action
+        
     )
 
     print(res)
