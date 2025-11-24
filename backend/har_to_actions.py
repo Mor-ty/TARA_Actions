@@ -64,4 +64,4 @@ def createActions(har_file_path: str):
 
 
 if __name__ == '__main__':
-    createActions("data/workflow1.har")
+    createActions("data/myfile.har")
