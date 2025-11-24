@@ -25,7 +25,12 @@ def gemini_with_file_structuredResp(
     Retries up to 3 times on failure.
     """
     client = get_genai_client()
-    uploaded = client.files.upload(file=file_to_upload)
+
+    # Upload HAR file with explicit MIME type
+    uploaded = client.files.upload(
+        file=file_to_upload,
+        mime_type="application/json"
+    )
 
     max_retries = 3
     delay = 2
