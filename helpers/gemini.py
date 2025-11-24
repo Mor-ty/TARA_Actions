@@ -24,13 +24,17 @@ def gemini_with_file_structuredResp(
     Sends a HAR file + prompt to Gemini API and returns JSON/text response.
     Retries up to 3 times on failure.
     """
-    client = get_genai_client()
 
-    # Upload HAR file with explicit MIME type
-    uploaded = client.files.upload(
-        file=file_to_upload,
-        mime_type="application/json"
-    )
+    # Ensure HAR has .json extension for upload
+    base, ext = os.path.splitext(file_to_upload)
+    if ext.lower() != ".json":
+        json_file = base + ".json"
+        os.rename(file_to_upload, json_file)
+    else:
+        json_file = file_to_upload
+
+    client = get_genai_client()
+    uploaded = client.files.upload(file=json_file)  # no mime_type argument
 
     max_retries = 3
     delay = 2
