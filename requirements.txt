@@ -1,2 +1,10 @@
 google-generativeai
+langchain
+langchain-community
+langchain-core
+google-genai
 pydantic
+pandas
+typing_extensions
+aiohttp
+requests
