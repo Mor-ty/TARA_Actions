@@ -20,14 +20,25 @@ jobs:
     - name: Detecting Latest HAR File
       id: detect_har
       run: |
-        HAR_FILE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep ".har" | head -n 1)
-        echo "Detected HAR file: $HAR_FILE"
+        echo " Detecting changed HAR files..."
 
-        if [ -z "$HAR_FILE" ]; then
-          echo " ERROR: No HAR file found in this commit."
+        # Try detecting changed files (only works for multi-file commits)
+        CHANGED_HAR=$(git diff --name-only HEAD~1 HEAD | grep "data/.*\.har" || true)
+
+        if [ -n "$CHANGED_HAR" ]; then
+          echo "Found changed HAR: $CHANGED_HAR"
+          HAR_FILE=$CHANGED_HAR
+        else
+          echo " No changed HAR file detected. Picking latest HAR in /data"
+          HAR_FILE=$(ls -t data/*.har | head -n 1)
+        fi
+
+        if [ ! -f "$HAR_FILE" ]; then
+          echo " ERROR: No HAR file found in /data/"
           exit 1
         fi
 
+        echo "Using HAR file: $HAR_FILE"
         echo "HAR_FILE=$HAR_FILE" >> $GITHUB_ENV
 
     # Step 3: Copy detected HAR file
