@@ -46,7 +46,7 @@ jobs:
       
       - name: Run Insight Analytics Agent
         run: |
-          python backend/insights.py \
+          python backend/insight_analytic_agent.py \
             "${{ github.event.inputs.jtl_file_path }}" \
             > final_insights_output.json
 
