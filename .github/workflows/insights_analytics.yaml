@@ -13,49 +13,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    
+
       # 1. CHECKOUT REPOSITORY
-      
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-   
       # 2. SETUP PYTHON
-     
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-    
       # 3. INSTALL DEPENDENCIES
-      
       - name: Install Requirements
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install langchain
 
-      
-      # 4. EXPORT GOOGLE API KEY
-      
+      # 4. FIX PYTHONPATH (to detect backend/helpers)
+      - name: Set PYTHONPATH
+        run: echo "PYTHONPATH=${PYTHONPATH}:$(pwd)/backend" >> $GITHUB_ENV
+
+      # 5. EXPORT GOOGLE API KEY
       - name: Set Gemini API Key
         run: echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> $GITHUB_ENV
 
-     
-      # 5. RUN THE INSIGHT ANALYSIS
-      
+      # 6. RUN THE INSIGHT ANALYSIS
       - name: Run Insight Analytics Agent
         run: |
           python backend/insight_analytic_agent.py \
             "${{ github.event.inputs.jtl_file_path }}" \
             > final_insights_output.json
 
-      
-      
-      # 7. SAVE AS ACTIONS ARTIFACT (OPTIONAL)
-      
-      - name: Upload as GitHub Artifact
+      # 7. UPLOAD RESULT
+      - name: Upload insights output
         uses: actions/upload-artifact@v4
         with:
           name: insights-output
