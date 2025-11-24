@@ -137,5 +137,8 @@ def insight_analytic_agent(jtl_file_with_path: str):
 
 
     
-if __name__=='__main__':
-    insight_analytic_agent("result/results.jtl")
+if __name__ == "__main__":
+    import sys
+    jtl_path = sys.argv[1] if len(sys.argv) > 1 else "result/results.jtl"
+    result = insight_analytic_agent.run({"jtl_file_with_path": jtl_path})
+    print(result)
