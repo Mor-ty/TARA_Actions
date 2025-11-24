@@ -1,8 +1,10 @@
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# backend/har_to_actions.py
+import sys
+import os
 import json
-from helpers.gemini import get_gemini_agent, gemini_with_file_structuredResp
-from helpers.utils import change_extension
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from helpers.gemini import gemini_with_file_structuredResp
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -15,9 +17,8 @@ class Action(BaseModel):
 
 
 def createActions(har_file_path: str):
-
-    # Convert HAR → TXT (your helper)
-    har_txt_file = change_extension(har_file_path)
+    if not os.path.exists(har_file_path):
+        raise FileNotFoundError(f"HAR not found: {har_file_path}")
 
     har_to_actions_prompt = '''
     You are a HAR-to-ACTION extractor.  
@@ -46,10 +47,10 @@ def createActions(har_file_path: str):
     If input HAR is large, summarize patterns but still output full ACTION objects.
     '''
 
-    # Call Gemini with file + structured response model
+    # Call Gemini with file
     res = gemini_with_file_structuredResp(
         prompt=har_to_actions_prompt,
-        file_to_upload=har_txt_file,
+        file_to_upload=har_file_path,
         Structured_class=Action
     )
 
@@ -57,10 +58,10 @@ def createActions(har_file_path: str):
 
     # Save result for CI/CD workflows
     with open("actions_output.json", "w", encoding="utf-8") as f:
-        json.dump(res, f, indent=2)
+        f.write(res)  # res is already JSON string
 
     return res
 
 
 if __name__ == '__main__':
-    createActions("har_files/demo.har")
+    createActions("data/myfile.har")

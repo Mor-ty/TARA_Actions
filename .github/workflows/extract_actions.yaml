@@ -4,14 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       har_path:
-        description: "Path to HAR file inside repo (e.g. har_files/demo.har)"
+        description: "Path to HAR file inside repo (e.g. data/myfile.har)"
         required: true
-        default: "har_files/demo.har"
+        default: "data/myfile.har"
 
 jobs:
   extract_actions:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -23,12 +22,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install google-genai
-          pip install pydantic
-          pip install typing_extensions
-
-          # in case utils/gemini import needs any custom lib
-          pip install requests
+          pip install google-genai==0.6.2 pydantic requests
 
       - name: Run HAR → Actions Script
         env:
