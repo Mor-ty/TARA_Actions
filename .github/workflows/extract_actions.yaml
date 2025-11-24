@@ -11,6 +11,8 @@ on:
 jobs:
   extract_actions:
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -22,13 +24,13 @@ jobs:
 
       - name: Install Dependencies
         run: |
-           pip install google-genai pydantic requests
+          pip install --upgrade pip
+          pip install google-genai pydantic requests typing_extensions
 
       - name: Run HAR → Actions Script
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
           echo "Running extractor on: ${{ github.event.inputs.har_path }}"
+          export PYTHONPATH="${PYTHONPATH}:${{ github.workspace }}"
           python backend/har_to_actions.py "${{ github.event.inputs.har_path }}"
 
       - name: Upload Extracted Actions
