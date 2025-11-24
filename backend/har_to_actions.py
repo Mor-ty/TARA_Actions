@@ -1,3 +1,5 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 from helpers.gemini import get_gemini_agent, gemini_with_file_structuredResp
 from helpers.utils import change_extension
