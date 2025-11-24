@@ -4,6 +4,7 @@ from google.genai import types
 from typing import List, Dict, Optional, Literal
 from pydantic import BaseModel, Field, conint
 import os
+import sys
 from helpers.gemini import gemini_with_file_structuredResp
 import pandas as pd
 
@@ -68,7 +69,7 @@ def get_metrics(jtl_path: str):
 # -----------------------------------------------------
 # LangChain Tool
 # -----------------------------------------------------
-@tool
+
 def insight_analytic_agent(jtl_file_with_path: str):
     """Insight Agent — Analyzes load test metrics and provides actionable insights."""
 
@@ -125,7 +126,7 @@ def insight_analytic_agent(jtl_file_with_path: str):
             ai_response = gemini_with_file_structuredResp(
                 prompt=prompt,
                 file_to_upload=f,
-                Structured_class=InsightsJTL
+                
             )
 
         insights.append("AI Recommendations:\n" + str(ai_response))
@@ -139,14 +140,11 @@ def insight_analytic_agent(jtl_file_with_path: str):
     
 if __name__ == "__main__":
     if __name__ == "__main__":
-    import sys
-    import json
+  
 
     # Accept JTL path from CLI argument
     jtl_path = sys.argv[1] if len(sys.argv) > 1 else "result/results.jtl"
 
-    # Properly execute the StructuredTool
-    result = insight_analytic_agent.run({"jtl_file_with_path": jtl_path})
+    result = insight_analytic_agent(jtl_path)
 
-    # Print clean JSON to stdout for GitHub Actions to capture
     print(json.dumps(result, indent=2))
