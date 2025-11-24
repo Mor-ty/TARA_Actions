@@ -1,0 +1,45 @@
+name: Extract Actions From HAR
+
+on:
+  workflow_dispatch:
+    inputs:
+      har_base64:
+        description: "Base64 of HAR file"
+        required: true
+        type: string
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Decode HAR file
+      run: |
+        echo "${{ github.event.inputs.har_base64 }}" | base64 --decode > input.har
+        echo "HAR saved as input.har"
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run extractor
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        export GOOGLE_API_KEY="${GEMINI_API_KEY}"
+        python har_to_actions.py input.har extracted_actions.json
+
+    - name: Upload output
+      uses: actions/upload-artifact@v4
+      with:
+        name: extracted-actions
+        path: extracted_actions.json
