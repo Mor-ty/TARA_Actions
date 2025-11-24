@@ -1,45 +1,44 @@
-name: Extract Actions From HAR
+name: HAR → Actions Extraction
 
 on:
   workflow_dispatch:
     inputs:
-      har_base64:
-        description: "Base64 of HAR file"
+      har_path:
+        description: "Path to HAR file inside repo (e.g. har_files/demo.har)"
         required: true
-        type: string
+        default: "har_files/demo.har"
 
 jobs:
-  extract:
+  extract_actions:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
 
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Decode HAR file
-      run: |
-        echo "${{ github.event.inputs.har_base64 }}" | base64 --decode > input.har
-        echo "HAR saved as input.har"
+      - name: Install Dependencies
+        run: |
+          pip install google-genai
+          pip install pydantic
+          pip install typing_extensions
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
+          # in case utils/gemini import needs any custom lib
+          pip install requests
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Run HAR → Actions Script
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          echo "Running extractor on: ${{ github.event.inputs.har_path }}"
+          python backend/har_to_actions.py "${{ github.event.inputs.har_path }}"
 
-    - name: Run extractor
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: |
-        export GOOGLE_API_KEY="${GEMINI_API_KEY}"
-        python har_to_actions.py input.har extracted_actions.json
-
-    - name: Upload output
-      uses: actions/upload-artifact@v4
-      with:
-        name: extracted-actions
-        path: extracted_actions.json
+      - name: Upload Extracted Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: extracted-actions
+          path: actions_output.json
