@@ -1,9 +1,18 @@
 # helpers/gemini.py
+import os
+import time
+from typing import Any, Dict
 from google import genai
 from google.genai import types
 from google.genai.errors import ServerError
-import time
-from typing import Any, Dict, Optional
+
+
+def get_genai_client():
+    """Return a genai.Client instance using GOOGLE_API_KEY from env."""
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("Missing GOOGLE_API_KEY environment variable!")
+    return genai.Client(api_key=api_key)
 
 
 def gemini_with_file_structuredResp(
@@ -11,11 +20,11 @@ def gemini_with_file_structuredResp(
         file_to_upload: str,
         model_name="gemini-2.5-flash",
         response_mime_type="application/json"):
-
-    # Create client (GOOGLE_API_KEY must exist in env for GitHub Actions)
-    client = genai.Client()
-
-    # Upload HAR directly (NO extension change)
+    """
+    Sends a HAR file + prompt to Gemini API and returns JSON/text response.
+    Retries up to 3 times on failure.
+    """
+    client = get_genai_client()
     uploaded = client.files.upload(file=file_to_upload)
 
     max_retries = 3
@@ -26,11 +35,9 @@ def gemini_with_file_structuredResp(
             response = client.models.generate_content(
                 model=model_name,
                 contents=[prompt, uploaded],
-                config={
-                    "response_mime_type": response_mime_type
-                }
+                config={"response_mime_type": response_mime_type}
             )
-            return response.text  # Already JSON
+            return response.text  # JSON as string
         except Exception as e:
             print(f"Attempt {attempt} failed: {e}")
             if attempt < max_retries:
@@ -40,10 +47,12 @@ def gemini_with_file_structuredResp(
                 raise
 
 
-def get_gemini_agent(prompt, model_name="gemini-2.5-flash",
+def get_gemini_agent(prompt: str,
+                     model_name="gemini-2.5-flash",
                      sys_instruction="respond within 30 words"):
+    """Send a text-only prompt to Gemini with retry on overload."""
     try:
-        client = genai.Client()
+        client = get_genai_client()
         response = client.models.generate_content(
             model=model_name,
             contents=prompt,
@@ -60,12 +69,13 @@ def get_gemini_agent(prompt, model_name="gemini-2.5-flash",
             raise
 
 
-def gemini_retry(prompt, model_name, sys_instruction,
+def gemini_retry(prompt: str, model_name: str, sys_instruction: str,
                  retries=5, backoff=2):
+    """Retry wrapper for get_gemini_agent on 503 errors."""
     for attempt in range(retries):
         try:
-            client = genai.Client()
-            return client.models.generate_content(
+            client = get_genai_client()
+            response = client.models.generate_content(
                 model=model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
@@ -73,12 +83,12 @@ def gemini_retry(prompt, model_name, sys_instruction,
                     temperature=0.1
                 )
             )
+            return response
         except ServerError as e:
             if e.status_code == 503:
-                print(f"Retrying in {backoff}s...")
+                print(f"Model overloaded. Retrying in {backoff}s...")
                 time.sleep(backoff)
                 backoff *= 2
             else:
                 raise
-
-    raise Exception("Failed after multiple retries")
+    raise Exception("Failed after multiple retries.")
