@@ -125,9 +125,10 @@ def insight_analytic_agent(jtl_file_with_path: str):
         with open(jtl_file_with_path, "rb") as f:
             ai_response = gemini_with_file_structuredResp(
                 prompt=prompt,
-                file_to_upload=f,
+                file_to_upload=jtl_file_with_path,
                 
             )
+
 
         insights.append("AI Recommendations:\n" + str(ai_response))
 
