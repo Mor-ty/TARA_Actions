@@ -22,7 +22,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install google-genai==0.6.2 pydantic requests
+           pip install google-genai pydantic requests
 
       - name: Run HAR → Actions Script
         env:
