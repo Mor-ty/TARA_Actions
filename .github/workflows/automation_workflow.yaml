@@ -64,13 +64,13 @@ jobs:
 
     - name: Convert HAR → JMX
       run: |
-        java \
-          -cp har-convertor-jmeter-plugin/target/har-convertor-jmeter-plugin-7.1-jar-with-dependencies.jar \
-          io.github.vdaburon.jmeterplugins.har.HarConvertorIntegrateGui \
-          -har_in input.har \
-          -jmx_out generated_test.jmx \
-          -add_pause true \
-          -new_tc_pause 3000
+        java -cp har-convertor-jmeter-plugin/target/har-convertor-jmeter-plugin-8.0-jar-with-dependencies.jar \
+        io.github.vdaburon.jmeterplugins.har.HarConvertorIntegrateGui \
+        -har_in input.har \
+        -jmx_out generated_test.jmx \
+        -remove_headers "User-Agent,Pragma,X-TOKEN" \
+        -add_pause true \
+        -new_tc_pause 3000
 
     - name: Show Output File
       run: ls -l generated_test.jmx
