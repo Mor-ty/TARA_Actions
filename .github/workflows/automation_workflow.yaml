@@ -69,11 +69,12 @@ jobs:
     - name: Converting  HAR to JMX
       run: |
         java -cp har-to-jmeter-convertor/target/har-to-jmeter-convertor-7.1-jar-with-dependencies.jar \
-          io.github.vdaburon.jmeter.har.HarForJMeter \
+          io.github.vdaburon.jmeter.har.Har2Jmx \
           -har_in input.har \
           -jmx_out generated_test.jmx \
           -add_pause true \
           -new_tc_pause 3000
+
         ls -l generated_test.jmx
 
     # Step 7: Validating JMX output
