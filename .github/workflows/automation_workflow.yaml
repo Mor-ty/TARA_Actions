@@ -5,32 +5,7 @@ on:
     paths:
       - "data/*.har"
   workflow_dispatch:
-    inputs:
-      har_file:
-        description: "Path of the HAR file in your repo"
-        required: true
-        type: string
-      users:
-        description: "Number of users for load test"
-        required: true
-        default: 1
-      iterations:
-        description: "Number of iterations"
-        required: true
-        default: 1
-      constant_time:
-        description: "Constant think time (ms)"
-        required: true
-        default: 1000
-      random_time:
-        description: "Random time (ms)"
-        required: true
-        default: 10000
-      random_time_variance:
-        description: "Variance (ms)"
-        required: true
-        default: 3000
-
+    
 jobs:
   testing-automation:
     runs-on: ubuntu-latest
@@ -40,44 +15,62 @@ jobs:
     - name: Repo Checkout
       uses: actions/checkout@v4
 
-    # Step 2: Copy HAR file from repo input
+   
+    # Step 2: Finding the latest HAR file from this commit
+    - name: Detecting Latest HAR File
+      id: detect_har
+      run: |
+        echo " Detecting changed HAR files..."
+        # Try detecting changed files (only works for multi-file commits)
+        CHANGED_HAR=$(git diff --name-only HEAD~1 HEAD | grep "data/.*\.har" || true)
+        if [ -n "$CHANGED_HAR" ]; then
+          echo "Found changed HAR: $CHANGED_HAR"
+          HAR_FILE=$CHANGED_HAR
+        else
+          echo " No changed HAR file detected. Picking latest HAR in /data"
+          HAR_FILE=$(ls -t data/*.har | head -n 1)
+        fi
+        if [ ! -f "$HAR_FILE" ]; then
+          echo " ERROR: No HAR file found in /data/"
+          exit 1
+        fi
+        echo "Using HAR file: $HAR_FILE"
+        echo "HAR_FILE=$HAR_FILE" >> $GITHUB_ENV
+    # Step 3: Copy detected HAR file
     - name: Copy HAR file
       run: |
-        echo "HAR FILE: ${{ github.event.inputs.har_file }}"
-        cp "${{ github.workspace }}/${{ github.event.inputs.har_file }}" ./input.har
-
-    # Step 3: Setup Java
+        echo "Using HAR file: $HAR_FILE"
+        cp "${{ github.workspace }}/${{ env.HAR_FILE }}" ./input.har
+    # Step 4: Setup Java
     - name: Java Setup
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: 17
 
-    # Step 4: Install Maven
+    # Step 5: Install Maven
     - name: Maven Installation
       run: sudo apt-get update && sudo apt-get install -y maven
 
-    # Step 5: Clone and building HAR→JMX plugin
+    # Step 6: Clone and building HAR→JMX plugin
     - name: Build HAR Converter JAR
       run: |
         git clone https://github.com/vdaburon/har-to-jmeter-convertor.git
         cd har-to-jmeter-convertor
-        mvn -q clean package
-        ls -lh target/
-
+        mvn clean package
+        ls -l target/
     
-    # Step 6: Converting HAR → JMX
+    # Step 7: Converting HAR → JMX
     - name: Converting  HAR to JMX
       run: |
         java -cp har-to-jmeter-convertor/target/har-to-jmeter-convertor-7.1-jar-with-dependencies.jar \
-        io.github.vdaburon.jmeter.har.Main \
-        har-to-jmeter-convertor \
-        -har_in input.har \
-        -jmx_out generated_test.jmx \
-        -add_pause true \
-        -new_tc_pause 3000
-
-    # Step 7: Validating JMX output
+          io.github.vdaburon.jmeter.har.HarForJMeter \
+          -har_in input.har \
+          -jmx_out generated_test.jmx \
+          -add_pause true \
+          -new_tc_pause 3000
+        ls -l generated_test.jmx
+    # Step 8: Validating JMX output
     - name: Validate JMX
       run: |
         if [ ! -s generated_test.jmx ]; then
@@ -85,15 +78,14 @@ jobs:
           exit 1
         fi
         echo "JMX is valid."
-
-    # Step 8: Docker Setup
+    # Step 9: Docker Setup
     - name: Docker Setup
       uses: docker/setup-buildx-action@v3
 
     - name: Install Docker Compose
       run: sudo apt-get update && sudo apt-get install -y docker-compose
 
-    # Step 9: Enforce limits
+    # Step 10: Enforce limits
     - name: Enforcing Limits
       run: |
         u=${{ github.event.inputs.users }}
@@ -102,8 +94,7 @@ jobs:
         if [ "$i" -gt 100 ]; then i=100; fi
         echo "users=$u" >> $GITHUB_ENV
         echo "iterations=$i" >> $GITHUB_ENV
-
-    # Step 10: Running JMeter test
+    # Step 11: Running JMeter test
     - name: Running JMeter Test
       run: |
         mkdir -p results
@@ -117,8 +108,7 @@ jobs:
           -Jconstant_time=${{ github.event.inputs.constant_time }} \
           -Jrandom_time=${{ github.event.inputs.random_time }} \
           -Jrandom_time_variance=${{ github.event.inputs.random_time_variance }}
-
-    # Step 11: Generating HTML report
+    # Step 12: Generating HTML report
     - name: Generating JMeter Report
       run: |
         docker run --rm \
@@ -126,8 +116,7 @@ jobs:
           -v ${{ github.workspace }}/results:/results \
           -w /jmeter justb4/jmeter:5.5 \
           -g ./results/results.jtl -o ./results/report
-
-    # Step 12: Uploading report
+    # Step 13: Uploading report
     - name: Uploading Report
       uses: actions/upload-artifact@v4
       with:
