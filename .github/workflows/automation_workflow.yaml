@@ -52,24 +52,29 @@ jobs:
     - name: Maven Installation
       run: sudo apt-get update && sudo apt-get install -y maven
 
-    # Step 6: Clone and building HAR→JMX plugin
-    - name: Build HAR Converter JAR
+    - name: Clone HAR Converter Plugin
       run: |
-        git clone https://github.com/vdaburon/har-to-jmeter-convertor.git
-        cd har-to-jmeter-convertor
+        git clone https://github.com/vdaburon/har-convertor-jmeter-plugin.git
+        cd har-convertor-jmeter-plugin
         mvn clean package
-        ls -l target/
-    
-    # Step 7: Converting HAR → JMX
-    - name: Converting  HAR to JMX
+
+    - name: List Built JAR
       run: |
-        java -cp har-to-jmeter-convertor/target/har-to-jmeter-convertor-7.1-jar-with-dependencies.jar \
-          io.github.vdaburon.jmeter.har.HarForJMeter \
+        ls -al har-convertor-jmeter-plugin/target/
+
+    - name: Convert HAR → JMX
+      run: |
+        java \
+          -cp har-convertor-jmeter-plugin/target/har-convertor-jmeter-plugin-7.1-jar-with-dependencies.jar \
+          io.github.vdaburon.jmeterplugins.har.HarConvertorIntegrateGui \
           -har_in input.har \
           -jmx_out generated_test.jmx \
           -add_pause true \
           -new_tc_pause 3000
-        ls -l generated_test.jmx
+
+    - name: Show Output File
+      run: ls -l generated_test.jmx
+
     # Step 8: Validating JMX output
     - name: Validate JMX
       run: |
