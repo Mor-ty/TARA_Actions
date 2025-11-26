@@ -60,7 +60,7 @@ jobs:
     # Step 5: Clone and building HAR→JMX plugin
     - name: Build HAR Converter JAR
       run: |
-         git clone https://github.com/vdaburon/har-to-jmeter-convertor.git
+        git clone https://github.com/vdaburon/har-to-jmeter-convertor.git
         cd har-to-jmeter-convertor
         mvn -q clean package
         ls -lh target/
